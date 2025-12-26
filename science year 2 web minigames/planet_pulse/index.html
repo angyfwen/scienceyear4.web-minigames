@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Quiz</title>
+    <!-- fonts and icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet">
+    <!-- jquery ui css -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden; /* keeping the screen clean bestie! (｡•̀ᴗ-)✧ */
+        }
+
+        .null {
+            border: none !important;
+        }
+        .null .planet_answer {
+            display: block !important;
+        }
+        .null .planet_answer img {
+            transform: scale(1) !important;
+        }
+
+        .ui-state-hover {
+            border: 2px dashed #11DFF3 !important;
+            box-shadow: 0px 0px 20px 0px rgba(52, 205, 224, 0.11);
+            transform: scale(1.2) !important;
+        }
+        .ui-state-hover span {
+            color: #11DFF3 !important;
+        }
+
+        .planets {
+            overflow: visible !important; /* NO CLIPPING ALLOWED! (๑˃ᴗ˂)ﻭ */
+            background: linear-gradient(135deg, #050505 0%, #1e0b2e 30%, #0a1d3b 65%, #2e0e24 100%);
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .planets_stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle var(--duration) infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .planets_container {
+            width: 1000px;
+            text-align: center;
+            height: 600px;
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: auto;
+            top: 50%;
+            transform: translateY(-50%);
+            overflow: visible !important; 
+        }
+
+        .planets_container__planets {
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            margin: 20px 50px;
+            min-height: 140px; 
+            position: relative;
+            overflow: visible !important;
+        }
+        
+        .planets_container__planets span {
+            color: white; 
+            font-size: 11px;
+            display: block;
+            margin-top: 7px;
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            font-weight: 700;
+            pointer-events: none;
+        }
+        
+        .planets_container__planets .planet_wrap {
+            width: 140px; 
+            position: relative; 
+            cursor: grab;
+            z-index: 50;
+            transition: opacity 0.3s ease; 
+            overflow: visible !important;
+        }
+
+        .saturn_wrap {
+            width: 280px !important; /* massive zone for saturn bestie! (｡•̀ᴗ-)✧ */
+        }
+
+        /* layer to prevent animation conflicts and clipping! (๑˃ᴗ˂)ﻭ */
+        .inner-float {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            overflow: visible !important;
+        }
+
+        .floating {
+            animation: gentle_float 6s ease-in-out infinite;
+        }
+
+        .planets_container__planets .planet {
+            border-radius: 100px;
+            position: relative;
+            pointer-events: none;
+            overflow: visible !important;
+        }
+
+        .saturn_wrap .planet {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .planets_container__planets .planet img {
+            height: 38px;
+            position: relative;
+            z-index: 11;
+            max-width: none !important; 
+        }
+
+        .saturn_wrap .planet img {
+            height: 48px !important; 
+        }
+
+        .planets_container__quiz {
+            margin-top: 110px; 
+            position: relative;
+            padding-left: 180px; 
+            margin-left: -120px;
+            z-index: 10;
+        }
+
+        .planets_container__quiz .planet_holder {
+            width: 40px;
+            transition: all .3s;
+            height: 40px;
+            border-radius: 100px; 
+            display: inline-block;
+            border: 2px dashed rgba(255, 255, 255, 0.22);
+            margin-right: 30px;
+            position: relative;
+        }
+        .planets_container__quiz .planet_holder span {
+            position: absolute;
+            left: 0;
+            right: 0;
+            color: white;
+            top: 50%;
+            transition: all .3s;
+            transform: translateY(-50%);
+        }
+
+        .planets_container__quiz .sun {
+            width: 700px; 
+            height: 700px; 
+            position: absolute;
+            left: -350px; 
+            top: 50%;
+            transform: translateY(-50%);
+            animation: space_wobble 10s linear infinite;
+            background: #ffcc00; 
+            box-shadow: 0 0 80px #ffaa00; 
+            border-radius: 50%;
+            border: none !important; /* absolutely no border bestie! (✿◠‿◠) */
+            z-index: 1;
+        }
+
+        .planets_container__quiz .mercury {
+            width: 30px;
+            height: 30px;
+            top: -15px; /* mercury is still nicely lowered for you! (✿◠‿◠) */
+            animation: space_wobble 5.7s .4s linear infinite;
+        }
+        .planets_container__quiz .mercury span { font-size: 10px; }
+
+        .planets_container__quiz .venus {
+            width: 40px;
+            height: 40px;
+            top: -20px;
+            animation: space_wobble 5.3s .8s linear infinite;
+        }
+
+        .planets_container__quiz .earth {
+            width: 50px;
+            height: 50px;
+            top: -30px;
+            animation: space_wobble 5.2s 1s linear infinite;
+        }
+
+        .planets_container__quiz .mars {
+            width: 46px;
+            height: 46px;
+            animation: space_wobble 5s .1s linear infinite;
+        }
+
+        .planets_container__quiz .jupiter {
+            width: 90px;
+            height: 90px;
+            top: -10px;
+            animation: space_wobble 4.7s .6s linear infinite;
+        }
+
+        .planets_container__quiz .saturn {
+            width: 80px; 
+            height: 80px;
+            border-radius: 100px !important; /* definitely a circle friend! (｡•̀ᴗ-)✧ */
+            top: 20px;
+            animation: space_wobble 5.9s .1s linear infinite;
+        }
+        .planets_container__quiz .saturn span { font-size: 26px; }
+
+        .planets_container__quiz .uranus {
+            width: 50px;
+            height: 50px;
+            top: -30px;
+            animation: space_wobble 6s .7s linear infinite;
+        }
+
+        .planets_container__quiz .neptune {
+            width: 47px;
+            height: 47px;
+            top: -10px;
+            animation: space_wobble 5s .4s linear infinite;
+        }
+
+        .planet_answer {
+            border-radius: 100px;
+            width: 100%;
+            height: 100%;
+        }
+        .planet_answer img {
+            width: 100%;
+            transform: scale(0);
+            transition: all .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .scale {
+            transform: scale(1) !important;
+        }
+
+        @keyframes gentle_float {
+            0% { transform: translate(0px, 0px); }
+            33% { transform: translate(12px, -8px); }
+            66% { transform: translate(-8px, 10px); }
+            100% { transform: translate(0px, 0px); }
+        }
+
+        @keyframes space_wobble {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(3px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="planets">
+        <div class="planets_stars"></div>
+        <div class="planets_container">
+
+            <!-- row 1 -->
+            <div class="planets_container__planets top-row">
+                <div class="planet_wrap" data-planet="earth">
+                    <div class="inner-float floating" style="animation-delay: 0s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_earth.png"></div>
+                        <span>Earth</span>
+                    </div>
+                </div>
+                <div class="planet_wrap saturn_wrap" data-planet="saturn">
+                    <div class="inner-float floating" style="animation-delay: -1.5s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_saturn.png"></div>
+                        <span>Saturn</span>
+                    </div>
+                </div>
+                <div class="planet_wrap" data-planet="mars">
+                    <div class="inner-float floating" style="animation-delay: -3s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_mars.png"></div>
+                        <span>Mars</span>
+                    </div>
+                </div>
+                <div class="planet_wrap" data-planet="uranus">
+                    <div class="inner-float floating" style="animation-delay: -4.5s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_uranus.png"></div>
+                        <span>Uranus</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="planets_container__quiz">
+                <!-- i removed the 'planet_holder' class from the sun so it doesn't get the hover outline! (๑˃ᴗ˂)ﻭ -->
+                <div class="sun null" data-planet="sun">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_sun.png"></div>
+                </div>
+                <div class="planet_holder mercury" data-planet="mercury">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_mercury.png"></div>
+                </div>
+                <div class="planet_holder venus" data-planet="venus">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_venus.png"></div>
+                </div>
+                <div class="planet_holder earth" data-planet="earth">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_earth.png"></div>
+                </div>
+                <div class="planet_holder mars" data-planet="mars">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_mars.png"></div>
+                </div>
+                <div class="planet_holder jupiter" data-planet="jupiter">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_jupiter.png"></div>
+                </div>
+                <div class="planet_holder saturn" data-planet="saturn">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_saturn.png"></div>
+                </div>
+                <div class="planet_holder uranus" data-planet="uranus">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_uranus.png"></div>
+                </div>
+                <div class="planet_holder neptune" data-planet="neptune">
+                    <span>?</span>
+                    <div class="planet_answer"><img src="https://s3-us-west-2.amazonaws.com/s.cdpt.io/217233/pq_neptune.png"></div>
+                </div>
+            </div>
+
+            <!-- row 2 -->
+            <div class="planets_container__planets bottom-row">
+                <div class="planet_wrap" data-planet="venus">
+                    <div class="inner-float floating" style="animation-delay: -0.5s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_venus.png"></div>
+                        <span>Venus</span>
+                    </div>
+                </div>
+                <div class="planet_wrap" data-planet="neptune">
+                    <div class="inner-float floating" style="animation-delay: -2.2s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_neptune.png"></div>
+                        <span>Neptune</span>
+                    </div>
+                </div>
+                <div class="planet_wrap" data-planet="mercury">
+                    <div class="inner-float floating" style="animation-delay: -3.8s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_mercury.png"></div>
+                        <span>Mercury</span>
+                    </div>
+                </div>
+                <div class="planet_wrap" data-planet="jupiter">
+                    <div class="inner-float floating" style="animation-delay: -5.4s;">
+                        <div class="planet"><img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/217233/pq_jupiter.png"></div>
+                        <span>Jupiter</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+    <script>
+        var planetSelector = '.planet_wrap'; 
+        var holderSelector = '.planet_holder';
+
+        function createStars() {
+            const container = document.querySelector('.planets_stars');
+            const starCount = 100; 
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 2 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                star.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(star);
+            }
+        }
+
+        function roamPlanets() {
+            $('.planet_wrap').each(function() {
+                var randomX = Math.floor(Math.random() * 40) - 20; 
+                var randomY = Math.floor(Math.random() * 60) - 30;  
+                $(this).css({
+                    'transform': 'translate(' + randomX + 'px, ' + randomY + 'px)'
+                });
+            });
+            $('.bottom-row').css('padding-left', '150px');
+        }
+
+        $(document).ready(function(){
+            createStars();
+            roamPlanets();
+
+            $(planetSelector).draggable({
+                revert: true,
+                revertDuration: 300,
+                scroll: false,
+                start: function() {
+                    $(this).css('z-index', 100);
+                    $(this).find('.inner-float').removeClass('floating');
+                },
+                stop: function() {
+                    $(this).css('z-index', 50);
+                    if($(this).css('opacity') != 0) {
+                        $(this).find('.inner-float').addClass('floating');
+                    }
+                }
+            });
+
+            $(holderSelector).droppable({
+                hoverClass: "ui-state-hover",
+                drop: function(event, ui){
+                    var droppedValue = $(this).data('planet');
+                    if($(ui.draggable).data('planet') == droppedValue){
+                        var $draggableWrap = $(ui.draggable);
+                        
+                        $draggableWrap.css({
+                            'pointer-events': 'none',
+                            'opacity': 0
+                        }).find('.inner-float').removeClass('floating');
+                        
+                        $(this).find('.planet_answer img').addClass('scale');
+                        $(this).find('.planet_answer').parent().css('border', 'none');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

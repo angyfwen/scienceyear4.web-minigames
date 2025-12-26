@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific Lab</title>
+    <!-- fontawesome for your cute icons! hihi -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --neon-pink: #ff00ff;
+            --neon-cyan: #00ffff;
+            --neon-lime: #39ff14;
+            --neon-yellow: #fff000;
+            --neon-red: #ff3131;
+            --bg-dark: #08080b;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at center, transparent 20%, #000 95%),
+                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 100% 100%, 60px 60px, 60px 60px;
+            animation: cyber-move 15s linear infinite;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            cursor: crosshair;
+            user-select: none;
+        }
+
+        @keyframes cyber-move {
+            0% { background-position: 0 0, 0 0, 0 0; }
+            100% { background-position: 0 0, 60px 60px, 60px 60px; }
+        }
+
+        .game-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        header {
+            text-align: center;
+            z-index: 100;
+            visibility: hidden; 
+            height: 32px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: fixed; 
+            top: 20px; 
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+            height: 100%;
+        }
+
+        h1 {
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-lime));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.8rem;
+            margin: 0;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.4));
+            font-weight: 800;
+            line-height: 32px; 
+            cursor: pointer; 
+            transition: transform 0.1s;
+        }
+        
+        h1:active { transform: scale(0.98); }
+
+        .nav-buttons {
+            position: absolute;
+            right: 30px;
+            top: 0; 
+            display: flex;
+            gap: 12px;
+            z-index: 1000;
+            height: 32px;
+            align-items: center;
+        }
+
+        .rainbow-circle-btn {
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            outline: none;
+        }
+        
+        .rainbow-circle-btn::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #39ff14, #fff000);
+            z-index: -1;
+            animation: rotate-gradient 3s linear infinite;
+        }
+
+        @keyframes rotate-gradient {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .rainbow-circle-btn:hover { 
+            transform: scale(1.1); 
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.4);
+        }
+        .rainbow-circle-btn svg { width: 16px; height: 16px; fill: white; pointer-events: none; }
+
+        #game-container {
+            position: relative;
+            width: 650px;
+            height: 420px;
+            border: 2px solid transparent;
+            background: linear-gradient(#000, #000) padding-box,
+                        linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-lime), var(--neon-cyan)) border-box;
+            background-size: 100% 100%, 200% 200%;
+            animation: border-flow 4s linear infinite;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 0, 255, 0.15);
+            border-radius: 8px;
+            transition: box-shadow 0.3s, border-color 0.3s;
+        }
+
+        @keyframes border-flow {
+            0% { background-position: 0% 0%, 0% 0%; }
+            50% { background-position: 0% 0%, 100% 100%; }
+            100% { background-position: 0% 0%, 0% 0%; }
+        }
+
+        #game-container.flash-correct {
+            background: linear-gradient(#000, #000) padding-box,
+                        var(--neon-lime) border-box;
+            animation: none;
+            box-shadow: 0 0 60px var(--neon-lime);
+        }
+
+        #game-container.flash-wrong {
+            background: linear-gradient(#000, #000) padding-box,
+                        var(--neon-red) border-box;
+            animation: none;
+            box-shadow: 0 0 60px var(--neon-red);
+        }
+
+        /* overlay screen smooth transition splurge! (≧◡≦) */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .overlay-screen.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: scale(1);
+        }
+
+        .rainbow-text {
+            background: linear-gradient(to right, #ff00ff, #00ffff, #39ff14, #fff000, #ff00ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow-scroll 3s linear infinite;
+            font-weight: bold;
+        }
+
+        @keyframes rainbow-scroll { to { background-position: 200% center; } }
+
+        #specimen-display, #revealed-specimen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 130px;
+            pointer-events: none;
+        }
+
+        #specimen-display { filter: brightness(0.1) blur(15px); }
+
+        #revealed-specimen {
+            clip-path: circle(75px at -100% -100%);
+            z-index: 2;
+        }
+
+        #lens {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 3px solid var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan), inset 0 0 10px var(--neon-cyan);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            display: none;
+        }
+
+        .clue-node {
+            position: absolute;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid white;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 0.85rem;
+            font-weight: bold;
+            z-index: 50;
+            transition: opacity 0.4s;
+            backdrop-filter: blur(8px);
+            white-space: nowrap;
+            transform: translate(-50%, -50%);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            text-transform: lowercase;
+        }
+
+        #ui-layer {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        #ui-layer.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        .drop-zone {
+            width: 200px;
+            height: 80px;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: 0.3s ease;
+            border-radius: 6px;
+            text-transform: lowercase;
+        }
+
+        .drop-zone b {
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .drop-zone small {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        #obs-zone { color: var(--neon-cyan); }
+        #inf-zone { color: var(--neon-pink); }
+
+        .active-obs { background: rgba(0, 255, 255, 0.15); transform: scale(1.05); border: 2px solid var(--neon-cyan); }
+        .active-inf { background: rgba(255, 0, 255, 0.15); transform: scale(1.05); border: 2px solid var(--neon-pink); }
+
+        #status-bar {
+            width: 650px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px; 
+            font-weight: bold;
+            font-size: 0.85rem;
+            visibility: hidden;
+            text-transform: lowercase;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        #status-bar.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-item svg { width: 14px; height: 14px; }
+
+        .button {
+            cursor: pointer;
+            position: relative;
+            padding: 10px 32px;
+            font-size: 18px;
+            color: var(--neon-lime);
+            border: 2px solid var(--neon-lime);
+            border-radius: 30px; 
+            background-color: transparent;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+            overflow: hidden;
+            pointer-events: all;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: lowercase;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: inherit;
+            scale: 0;
+            z-index: -1;
+            background-color: var(--neon-lime);
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.320, 1);
+        }
+
+        .button:hover::before { scale: 12; }
+        .button:hover { color: #212121; scale: 1.05; box-shadow: 0 0px 20px rgba(57, 255, 20, 0.4); }
+
+        .edu-link {
+            margin-top: 15px;
+            color: var(--neon-yellow);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.2s;
+            opacity: 0.8;
+            text-transform: lowercase;
+        }
+        .edu-link:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .lab-core-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lab-core-icon {
+            font-size: 50px;
+            color: var(--neon-cyan);
+            z-index: 2;
+            filter: drop-shadow(0 0 10px var(--neon-cyan));
+            animation: core-pulse 2s ease-in-out infinite;
+        }
+
+        .lab-ring {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border: 2px dashed var(--neon-cyan);
+            border-radius: 50%;
+            animation: rotate-ring 10s linear infinite;
+            opacity: 0.4;
+        }
+
+        .lab-ring-outer {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            border: 1px solid var(--neon-pink);
+            border-radius: 50%;
+            animation: rotate-ring-rev 15s linear infinite;
+            opacity: 0.2;
+        }
+
+        @keyframes rotate-ring { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes rotate-ring-rev { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+        @keyframes core-pulse { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+
+        .edu-info-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+        }
+        .edu-info-item i {
+            color: var(--neon-cyan);
+            font-size: 1.2rem;
+            width: 25px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="main-header">
+        <div class="header-top">
+            <!-- easter egg triggered by clicking the h1 3 times! hihi (≧◡≦) -->
+            <h1 id="title-h1" onclick="handleTitleClick()">[ Scientific Lab ]</h1>
+            <div class="nav-buttons">
+                <button class="rainbow-circle-btn" onclick="goHome()" title="Home">
+                    <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                </button>
+                <button class="rainbow-circle-btn" onclick="restartLevel()" title="Restart Level">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                </button>
+                <button class="rainbow-circle-btn" onclick="showHelp()" title="Help">
+                    <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+                </button>
+                <button class="rainbow-circle-btn" onclick="toggleMute()" title="Mute/Unmute">
+                    <svg id="mute-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="game-unit">
+        <div id="status-bar">
+            <span class="status-item">
+                <svg viewBox="0 0 24 24" fill="var(--neon-lime)"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                <span id="level-display">prism: 01/05</span>
+            </span>
+            <span class="status-item">
+                <svg viewBox="0 0 24 24" fill="var(--neon-yellow)"><path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.05.5-9 4.77-9 9.95 0 5.52 4.48 10 10 10 1.45 0 2.83-.32 4.07-.88l-1.53-2.6c-.79.3-1.64.48-2.54.48zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>
+                <span id="sync-display">skill_sync: 0%</span>
+            </span>
+        </div>
+
+        <div id="game-container">
+            <!-- start screen -->
+            <div id="start-screen" class="overlay-screen active">
+                <div class="lab-core-container">
+                    <div class="lab-ring"></div>
+                    <div class="lab-ring-outer"></div>
+                    <i class="fa-solid fa-microscope lab-core-icon"></i>
+                </div>
+                
+                <div style="font-size:2.2rem; margin-bottom:10px; background:linear-gradient(45deg, #0ff, #f0f, #39ff14); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:900;">SCIENTIFIC LAB</div>
+                <p style="opacity: 0.8; max-width: 80%;">Practice your observing and inferring skills. Use the magnifier to find clues and sort them into the correct zones!</p>
+                
+                <button class="button" onclick="startGame()">start mission</button>
+                
+                <div class="edu-link" onclick="showEdu()">
+                    <i class="fa-solid fa-graduation-cap"></i> educational value
+                </div>
+            </div>
+
+            <!-- edu screen -->
+            <div id="edu-screen" class="overlay-screen">
+                <div style="font-size:1.8rem; margin-bottom:20px; color: var(--neon-yellow); display: flex; align-items: center; gap: 15px;">
+                    <i class="fa-solid fa-brain"></i> how is this educational?
+                </div>
+                
+                <div style="max-width: 85%;">
+                    <div class="edu-info-item">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>train your scientific eyes to gather <b>observations</b>—raw, factual sensory data!</span>
+                    </div>
+                    <div class="edu-info-item">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>develop logic by forming <b>inferences</b>—conclusions based on your direct evidence!</span>
+                    </div>
+                    <div class="edu-info-item">
+                        <i class="fa-solid fa-vial"></i>
+                        <span>practice critical thinking by categorizing complex laboratory data sets!</span>
+                    </div>
+                    <div class="edu-info-item">
+                        <i class="fa-solid fa-dna"></i>
+                        <span>master Year 2 scientific inquiry skills through hands-on virtual experimentation!</span>
+                    </div>
+                </div>
+
+                <div class="edu-link" onclick="closeEdu()" style="margin-top: 25px;">
+                    [ back to start ]
+                </div>
+            </div>
+
+            <!-- help screen -->
+            <div id="help-screen" class="overlay-screen">
+                <div style="font-size:2.2rem; margin-bottom:15px;" class="rainbow-text">How to play?</div>
+                <ul style="text-align: left; line-height: 1.6; padding-left: 0; list-style: none; max-width: 80%;">
+                    <li style="margin-bottom:10px; color: white; display: flex; align-items: flex-start; gap: 10px;">
+                        <span>1.</span> move the magnifier to find hidden data nodes!
+                    </li>
+                    <li style="margin-bottom:10px; color: white; display: flex; align-items: flex-start; gap: 10px;">
+                        <span>2.</span> observations are things you see directly!
+                    </li>
+                    <li style="margin-bottom:10px; color: white; display: flex; align-items: flex-start; gap: 10px;">
+                        <span>3.</span> inferences are your logical conclusions!
+                    </li>
+                    <li style="margin-bottom:10px; color: white; display: flex; align-items: flex-start; gap: 10px;">
+                        <span>4.</span> drag nodes to correct zones to sync data!
+                    </li>
+                    <li style="margin-bottom:10px; color: white; display: flex; align-items: flex-start; gap: 10px;">
+                        <span>5.</span> complete 5 specimens to win! hihi (≧◡≦)
+                    </li>
+                </ul>
+                <button class="button" onclick="closeHelp()">back to mission</button>
+            </div>
+
+            <!-- end screen -->
+            <div id="end-screen" class="overlay-screen">
+                <div id="end-title" style="font-size:2.4rem; margin-bottom:10px; background:linear-gradient(45deg, #0ff, #f0f, #39ff14); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:900;">Mission Completed</div>
+                <div style="font-size:1.1rem; opacity: 0.9; padding: 0 20px; margin-top: 5px;">You've successfully mastered the Year 2 scientific lab!</div>
+                <button class="button" onclick="goHome()">back to home</button>
+            </div>
+
+            <div id="specimen-display"></div>
+            <div id="revealed-specimen"></div>
+
+            <div id="lens"></div>
+            <div id="clues-container"></div>
+
+            <div id="ui-layer">
+                <div id="obs-zone" class="drop-zone">
+                    <b>[ observation ]</b>
+                    <small>sensory input</small>
+                </div>
+                <div id="inf-zone" class="drop-zone">
+                    <b>[ inference ]</b>
+                    <small>logical deduction</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const lens = document.getElementById('lens');
+        const revealed = document.getElementById('revealed-specimen');
+        const cluesContainer = document.getElementById('clues-container');
+        const syncDisplay = document.getElementById('sync-display');
+        const levelDisplay = document.getElementById('level-display');
+        const obsZone = document.getElementById('obs-zone');
+        const infZone = document.getElementById('inf-zone');
+        const startScreen = document.getElementById('start-screen');
+        const endScreen = document.getElementById('end-screen');
+        const helpScreen = document.getElementById('help-screen');
+        const eduScreen = document.getElementById('edu-screen');
+        const statusBar = document.getElementById('status-bar');
+        const uiLayer = document.getElementById('ui-layer');
+        const mainHeader = document.getElementById('main-header');
+        const muteIcon = document.getElementById('mute-icon');
+
+        let currentLevel = 0;
+        let score = 0;
+        let activeNode = null;
+        let gameStarted = false;
+        let isMuted = false;
+        let titleClickCount = 0;
+        
+        const LENS_RADIUS = 75; 
+        const MAGNETIC_PULL = 0.4;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (isMuted) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
+                oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'wrong') {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(110, audioCtx.currentTime); 
+                oscillator.frequency.linearRampToValueAtTime(55, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'complete') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.5);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.6);
+            }
+        }
+
+        const levels = [
+            {
+                emoji: "🌵",
+                clues: [
+                    { text: "yellow stems", type: "obs", x: 200, y: 150 },
+                    { text: "dry soil surface", type: "obs", x: 350, y: 280 },
+                    { text: "needs more water", type: "inf", x: 480, y: 120 },
+                    { text: "too much sun", type: "inf", x: 150, y: 240 }
+                ]
+            },
+            {
+                emoji: "🧊",
+                clues: [
+                    { text: "liquid on floor", type: "obs", x: 300, y: 250 },
+                    { text: "white vapor rising", type: "obs", x: 320, y: 120 },
+                    { text: "ice is melting", type: "inf", x: 450, y: 180 },
+                    { text: "it's too warm", type: "inf", x: 180, y: 130 }
+                ]
+            },
+            {
+                emoji: "🐈",
+                clues: [
+                    { text: "back is arched", type: "obs", x: 320, y: 140 },
+                    { text: "tail is bushy", type: "obs", x: 420, y: 240 },
+                    { text: "cat is scared", type: "inf", x: 200, y: 260 },
+                    { text: "sees a predator", type: "inf", x: 160, y: 120 }
+                ]
+            },
+            {
+                emoji: "🪞",
+                clues: [
+                    { text: "cracked surface", type: "obs", x: 240, y: 150 },
+                    { text: "glass on floor", type: "obs", x: 380, y: 280 },
+                    { text: "something hit it", type: "inf", x: 480, y: 130 },
+                    { text: "it fell down", type: "inf", x: 140, y: 220 }
+                ]
+            },
+            {
+                emoji: "☕",
+                clues: [
+                    { text: "temp is 100°C", type: "obs", x: 280, y: 200 },
+                    { text: "bubbles at base", type: "obs", x: 340, y: 280 },
+                    { text: "water is boiling", type: "inf", x: 480, y: 240 },
+                    { text: "heat is absorbed", type: "inf", x: 150, y: 130 }
+                ]
+            }
+        ];
+
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            gameStarted = true;
+            titleClickCount = 0;
+            
+            // smooth fade transitions bulge! hihi
+            startScreen.classList.remove('active');
+            endScreen.classList.remove('active');
+            helpScreen.classList.remove('active');
+            eduScreen.classList.remove('active');
+            
+            mainHeader.style.visibility = 'visible'; 
+            lens.style.display = 'block';
+            uiLayer.classList.add('visible');
+            statusBar.classList.add('visible');
+            loadLevel(0);
+        }
+
+        function handleTitleClick() {
+            if (!gameStarted) return;
+            titleClickCount++;
+            if (titleClickCount >= 3) {
+                triggerEasterEgg();
+            }
+        }
+
+        function triggerEasterEgg() {
+            playSound('complete');
+            gameStarted = false;
+            titleClickCount = 0;
+            mainHeader.style.visibility = 'hidden'; 
+            lens.style.display = 'none';
+            uiLayer.classList.remove('visible');
+            statusBar.classList.remove('visible');
+            endScreen.classList.add('active');
+        }
+
+        function goHome() {
+            gameStarted = false;
+            titleClickCount = 0;
+            
+            startScreen.classList.add('active');
+            endScreen.classList.remove('active');
+            helpScreen.classList.remove('active');
+            eduScreen.classList.remove('active');
+            
+            mainHeader.style.visibility = 'hidden'; 
+            lens.style.display = 'none';
+            uiLayer.classList.remove('visible');
+            statusBar.classList.remove('visible');
+            cluesContainer.innerHTML = "";
+            document.getElementById('specimen-display').innerText = "";
+            revealed.innerText = "";
+        }
+
+        function showHelp() {
+            helpScreen.classList.add('active');
+            lens.style.display = 'none';
+            uiLayer.classList.remove('visible');
+        }
+
+        function closeHelp() {
+            helpScreen.classList.remove('active');
+            if (gameStarted) {
+                lens.style.display = 'block';
+                uiLayer.classList.add('visible');
+            } else {
+                startScreen.classList.add('active');
+            }
+        }
+
+        function showEdu() {
+            startScreen.classList.remove('active');
+            eduScreen.classList.add('active');
+        }
+
+        function closeEdu() {
+            eduScreen.classList.remove('active');
+            startScreen.classList.add('active');
+        }
+
+        function restartLevel() {
+            helpScreen.classList.remove('active');
+            eduScreen.classList.remove('active');
+            titleClickCount = 0;
+            loadLevel(currentLevel);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteIcon.innerHTML = isMuted ? 
+                '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>' : 
+                '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+        }
+
+        container.addEventListener('mousemove', (e) => {
+            if (!gameStarted || helpScreen.classList.contains('active') || eduScreen.classList.contains('active')) return;
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            updateMagnifier(mouseX, mouseY);
+            if (activeNode) {
+                activeNode.style.left = `${mouseX}px`;
+                activeNode.style.top = `${mouseY}px`;
+                activeNode.style.transform = `translate(-50%, -50%)`;
+                checkZoneHover(mouseX, mouseY);
+            } else {
+                document.querySelectorAll('.clue-node').forEach(node => {
+                    const ox = parseFloat(node.dataset.ox);
+                    const oy = parseFloat(node.dataset.oy);
+                    const dx = mouseX - ox;
+                    const dy = mouseY - oy;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < LENS_RADIUS) {
+                        node.style.opacity = "1";
+                        node.style.pointerEvents = "all";
+                        const pull = (1 - dist / LENS_RADIUS) * MAGNETIC_PULL;
+                        node.style.transform = `translate(calc(-50% + ${dx * pull}px), calc(-50% + ${dy * pull}px))`;
+                    } else {
+                        node.style.opacity = "0";
+                        node.style.pointerEvents = "none";
+                        node.style.transform = `translate(-50%, -50%)`;
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (!activeNode || !gameStarted || helpScreen.classList.contains('active') || eduScreen.classList.contains('active')) return;
+            const rect = container.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const zone = getZoneAt(x, y);
+            const clueIdx = parseInt(activeNode.dataset.index);
+            const clue = levels[currentLevel].clues[clueIdx];
+            if (zone && zone === clue.type) {
+                activeNode.style.visibility = "hidden";
+                score++;
+                updateSync();
+                triggerFlash('correct');
+                playSound('correct');
+                if (score === levels[currentLevel].clues.length) {
+                    setTimeout(nextLevel, 500);
+                }
+            } else if (zone) {
+                triggerFlash('wrong');
+                playSound('wrong');
+                resetNode(activeNode);
+            } else {
+                resetNode(activeNode);
+            }
+            activeNode = null;
+            clearZoneHighlights();
+        });
+
+        function triggerFlash(type) {
+            container.classList.remove('flash-correct', 'flash-wrong');
+            void container.offsetWidth; 
+            container.classList.add(`flash-${type}`);
+            setTimeout(() => {
+                container.classList.remove(`flash-${type}`);
+            }, 400);
+        }
+
+        function updateMagnifier(x, y) {
+            lens.style.left = `${x}px`;
+            lens.style.top = `${y}px`;
+            revealed.style.clipPath = `circle(${LENS_RADIUS}px at ${x}px ${y}px)`;
+        }
+
+        function checkZoneHover(x, y) {
+            clearZoneHighlights();
+            const zone = getZoneAt(x, y);
+            if (zone === 'obs') obsZone.classList.add('active-obs');
+            if (zone === 'inf') infZone.classList.add('active-inf');
+        }
+
+        function getZoneAt(x, y) {
+            if (y > 320 && y < 400) { 
+                if (x > 95 && x < 295) return 'obs';
+                if (x > 355 && x < 555) return 'inf';
+            }
+            return null;
+        }
+
+        function clearZoneHighlights() {
+            obsZone.classList.remove('active-obs');
+            infZone.classList.remove('active-inf');
+        }
+
+        function resetNode(node) {
+            node.style.left = `${node.dataset.ox}px`;
+            node.style.top = `${node.dataset.oy}px`;
+            node.style.transform = `translate(-50%, -50%)`;
+        }
+
+        function loadLevel(idx) {
+            currentLevel = idx;
+            cluesContainer.innerHTML = "";
+            score = 0;
+            const lvl = levels[idx];
+            document.getElementById('specimen-display').innerText = lvl.emoji;
+            revealed.innerText = lvl.emoji;
+            levelDisplay.innerText = `prism: 0${idx + 1}/05`;
+            updateSync();
+            lvl.clues.forEach((clue, i) => {
+                const div = document.createElement('div');
+                div.className = 'clue-node';
+                div.innerText = clue.text; 
+                div.style.left = `${clue.x}px`;
+                div.style.top = `${clue.y}px`;
+                div.style.opacity = "0";
+                div.style.pointerEvents = "none";
+                div.dataset.ox = clue.x;
+                div.dataset.oy = clue.y;
+                div.dataset.index = i;
+                div.addEventListener('mousedown', (e) => {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    activeNode = div;
+                    const rect = container.getBoundingClientRect();
+                    div.style.left = `${e.clientX - rect.left}px`;
+                    div.style.top = `${e.clientY - rect.top}px`;
+                });
+                cluesContainer.appendChild(div);
+            });
+        }
+
+        function updateSync() {
+            const total = levels[currentLevel].clues.length;
+            const percent = Math.round((score / total) * 100);
+            syncDisplay.innerText = `skill_sync: ${percent}%`;
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel < levels.length) {
+                loadLevel(currentLevel);
+            } else {
+                playSound('complete');
+                gameStarted = false;
+                mainHeader.style.visibility = 'hidden'; 
+                lens.style.display = 'none';
+                uiLayer.classList.remove('visible');
+                statusBar.classList.remove('visible');
+                endScreen.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Leaf Lab: Photosynthesis Rush</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Grandstander:wght@700;900&family=Lexend:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --leaf-deep: #064e3b;
+            --leaf-bright: #10b981;
+            --sun-glow: #fbbf24;
+            --water-blue: #38bdf8;
+            --co2-gray: #cbd5e1;
+            --font-title: 'Grandstander', cursive;
+            --font-body: 'Lexend', sans-serif;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+        body {
+            margin: 0; overflow: hidden;
+            font-family: var(--font-body);
+            background: var(--leaf-deep);
+            width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; touch-action: none;
+        }
+
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; z-index: 1;
+            filter: blur(50px); opacity: 0.6;
+        }
+
+        #game-canvas {
+            position: fixed; top: 0; left: 0; z-index: 2;
+        }
+
+        #game-stage {
+            position: fixed; inset: 0;
+            z-index: 10; overflow: hidden;
+            display: flex; flex-direction: column;
+            pointer-events: none; 
+        }
+
+        .hud-top {
+            position: absolute; top: 20px; left: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            padding: 0 15px; pointer-events: none;
+        }
+
+        .badges-row {
+            display: flex; justify-content: center; gap: 10px;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            padding: 10px 18px; border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            font-family: var(--font-title); font-size: 1.1rem;
+            display: flex; align-items: center; gap: 8px;
+            color: white; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .fact-bar {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px 20px; border-radius: 10px;
+            font-size: 0.8rem; font-weight: 600;
+            color: var(--leaf-bright); border: 1px solid rgba(16, 185, 129, 0.2);
+            text-transform: uppercase; letter-spacing: 1px;
+            max-width: 90%; text-align: center;
+        }
+
+        .energy-badge { border-color: var(--leaf-bright); color: #fff; background: rgba(16, 185, 129, 0.3); }
+
+        .overlay {
+            position: fixed; inset: 0; z-index: 999;
+            background: rgba(6, 78, 59, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            pointer-events: auto;
+        }
+
+        .card {
+            background: white; padding: 40px 25px; border-radius: 40px;
+            text-align: center; max-width: 350px; width: 92%;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            border: 8px solid var(--leaf-bright);
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto;
+        }
+
+        @keyframes popIn { from {transform: scale(0.6); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+
+        .title-text {
+            font-family: var(--font-title); font-size: 2.8rem;
+            color: var(--leaf-deep); line-height: 0.95; margin-bottom: 15px;
+        }
+
+        .btn-main {
+            background: var(--leaf-bright); color: white;
+            padding: 18px 55px; border-radius: 60px;
+            font-family: var(--font-title); font-size: 2rem;
+            border: none; cursor: pointer; margin-top: 15px;
+            box-shadow: 0 8px 0 #065f46;
+            transition: transform 0.1s, box-shadow 0.1s;
+            animation: pulseBtn 2s infinite;
+            pointer-events: auto;
+            display: inline-block;
+        }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 4px 0 #065f46; }
+        
+        @keyframes pulseBtn {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        #mission-text {
+            position: absolute; bottom: 140px; left: 50%; transform: translateX(-50%);
+            color: white; font-weight: 800; font-size: 1.1rem; text-shadow: 0 2px 4px black;
+            font-family: var(--font-title); background: rgba(0,0,0,0.4);
+            padding: 5px 20px; border-radius: 50px; white-space: nowrap;
+        }
+
+        .recipe-bar {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 12px; z-index: 50;
+            background: rgba(0,0,0,0.3); padding: 12px; border-radius: 25px;
+            backdrop-filter: blur(10px);
+            pointer-events: none;
+        }
+
+        .ingredient {
+            width: 60px; height: 60px; border-radius: 18px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 1.2rem; transition: 0.3s;
+            color: white; font-family: var(--font-title);
+        }
+        .ingredient small { font-size: 0.6rem; font-family: var(--font-body); }
+        
+        .ingredient.active {
+            background: white; 
+            transform: scale(1.05) translateY(-3px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+            color: var(--leaf-deep);
+            border-color: var(--leaf-bright);
+        }
+
+        .feedback-pop {
+            position: absolute; pointer-events: none;
+            font-family: var(--font-title); font-size: 2rem;
+            color: white; z-index: 200; animation: floatUp 0.8s ease-out forwards;
+            text-align: center; line-height: 1;
+        }
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+            30% { opacity: 1; }
+            100% { transform: translate(-50%, -150px) scale(1.4); opacity: 0; }
+        }
+
+        #custom-cursor {
+            position: fixed; width: 60px; height: 60px;
+            border: 4px solid white;
+            border-radius: 50%; pointer-events: none;
+            z-index: 300; transform: translate(-50%, -50%);
+            display: none; background: rgba(255,255,255,0.1);
+            box-shadow: 0 0 20px white;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="custom-cursor"></div>
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="game-stage">
+        <div class="hud-top">
+            <div id="fact-box" class="fact-bar">CHLOROPLAST INITIALIZING...</div>
+            <div class="badges-row">
+                <div class="badge energy-badge">
+                    <i class="fa-solid fa-cube"></i> <span id="sugar-count">0</span>g C₆H₁₂O₆
+                </div>
+                <div class="badge">
+                    <i class="fa-solid fa-wind"></i> <span id="o2-count">0</span>% O₂
+                </div>
+                <div class="badge" style="color: #ff5252;">
+                    <i class="fa-solid fa-clock"></i> <span id="timer">60</span>s
+                </div>
+            </div>
+        </div>
+
+        <div id="mission-text">MISSION: COLLECT ☀️ ENERGY!</div>
+
+        <div class="recipe-bar">
+            <div id="slot-sun" class="ingredient">☀️<small>ENERGY</small></div>
+            <div id="slot-water" class="ingredient">H₂O<small>WATER</small></div>
+            <div id="slot-co2" class="ingredient">CO₂<small>CARBON</small></div>
+        </div>
+    </div>
+
+    <div id="start-overlay" class="overlay">
+        <div class="card">
+            <div style="font-size: 4rem; margin-bottom: 5px;">🍃</div>
+            <div class="title-text">CHLOROPLAST<br>SIMULATOR</div>
+            <button class="btn-main" id="play-btn">START LAB</button>
+        </div>
+    </div>
+
+    <div id="end-overlay" class="overlay" style="display: none; opacity: 0;">
+        <div class="card">
+            <div class="title-text" id="end-title">LAB RESULTS</div>
+            <p id="end-score" style="font-size: 1.2rem; color: #444; margin: 20px 0; font-weight: 700;"></p>
+            <button class="btn-main" onclick="location.reload()">REPLAY LAB</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const cursor = document.getElementById('custom-cursor');
+        const playBtn = document.getElementById('play-btn');
+        const factBox = document.getElementById('fact-box');
+        const missionText = document.getElementById('mission-text');
+
+        let width, height;
+        let particles = [];
+        let gameActive = false;
+        let timeLeft = 60;
+        let sugar = 0;
+        let oxygen = 0;
+        let mouse = { x: -1000, y: -1000, down: false };
+        let currentRecipe = { sun: false, water: false, co2: false };
+        let pulseEffect = 0;
+        let corePing = 0;
+
+        const COLORS = {
+            sun: '#fbbf24',
+            water: '#38bdf8',
+            co2: '#f1f5f9',
+            leaf: '#10b981'
+        };
+
+        const FACTS = [
+            "CO2 ENTERS THROUGH STOMATA (TINY LEAF PORES)",
+            "H2O IS ABSORBED BY ROOTS FROM THE SOIL",
+            "CHLOROPHYLL TRAPS LIGHT ENERGY IN THE CHLOROPLAST",
+            "GLUCOSE IS THE ENERGY SOURCE FOR THE PLANT'S GROWTH",
+            "OXYGEN IS RELEASED AS A BYPRODUCT OF THIS REACTION"
+        ];
+
+        const SUCTION_RADIUS = 150; 
+
+        function resize() {
+            width = canvas.width = bgCanvas.width = window.innerWidth;
+            height = canvas.height = bgCanvas.height = window.innerHeight;
+            drawBackground();
+        }
+
+        function drawBackground() {
+            const grad = bgCtx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
+            grad.addColorStop(0, '#065f46');
+            grad.addColorStop(1, '#022c22');
+            bgCtx.fillStyle = grad;
+            bgCtx.fillRect(0, 0, width, height);
+            
+            for(let i=0; i<12; i++) {
+                bgCtx.fillStyle = 'rgba(16, 185, 129, 0.1)';
+                bgCtx.beginPath();
+                bgCtx.arc(Math.random()*width, Math.random()*height, 60 + Math.random()*160, 0, Math.PI*2);
+                bgCtx.fill();
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        const updateMouse = (e) => {
+            const t = e.touches ? e.touches[0] : e;
+            mouse.x = t.clientX;
+            mouse.y = t.clientY;
+            cursor.style.left = mouse.x + 'px';
+            cursor.style.top = mouse.y + 'px';
+        };
+
+        window.addEventListener('mousedown', (e) => { if(!gameActive) return; mouse.down = true; updateMouse(e); cursor.style.display = 'block'; });
+        window.addEventListener('mousemove', (e) => { updateMouse(e); });
+        window.addEventListener('mouseup', () => { mouse.down = false; cursor.style.display = 'none'; });
+        
+        window.addEventListener('touchstart', (e) => { 
+            if(e.target.closest('.overlay')) return;
+            if(!gameActive) return;
+            mouse.down = true; 
+            updateMouse(e); 
+            cursor.style.display = 'block';
+            
+            let closest = null;
+            let minDist = Infinity;
+            particles.forEach(p => {
+                const onScreen = p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height;
+                const d = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+                if(onScreen && d < 100 && !currentRecipe[p.type] && d < minDist) {
+                    minDist = d;
+                    closest = p;
+                }
+            });
+            if(closest) closest.snapped = true;
+            e.preventDefault();
+        }, {passive: false});
+
+        window.addEventListener('touchmove', (e) => { if(gameActive) { updateMouse(e); e.preventDefault(); } }, {passive: false});
+        window.addEventListener('touchend', () => { mouse.down = false; cursor.style.display = 'none'; });
+
+        playBtn.addEventListener('click', startGame);
+
+        class Particle {
+            constructor() {
+                this.init(true);
+            }
+            init(firstTime = false) {
+                this.type = ['sun', 'water', 'co2'][Math.floor(Math.random() * 3)];
+                if(firstTime) {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                } else {
+                    const side = Math.floor(Math.random()*4);
+                    if(side === 0) { this.x = -40; this.y = Math.random()*height; }
+                    else if(side === 1) { this.x = width+40; this.y = Math.random()*height; }
+                    else if(side === 2) { this.x = Math.random()*width; this.y = -40; }
+                    else { this.x = Math.random()*width; this.y = height+40; }
+                }
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.size = 35 + Math.random() * 5;
+                this.color = COLORS[this.type];
+                this.snapped = false;
+                this.isTargeted = false; 
+            }
+            update() {
+                const rx = width/2;
+                const ry = height/2;
+
+                if (this.snapped) {
+                    this.x += (rx - this.x) * 0.16;
+                    this.y += (ry - this.y) * 0.16;
+                } else {
+                    const dx = mouse.x - this.x;
+                    const dy = mouse.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (mouse.down && this.isTargeted && dist < SUCTION_RADIUS) {
+                        const pull = (SUCTION_RADIUS - dist) / SUCTION_RADIUS;
+                        this.vx += dx * pull * 0.22; 
+                        this.vy += dy * pull * 0.22;
+                    }
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    this.vx *= 0.95; 
+                    this.vy *= 0.95;
+
+                    this.vx += (Math.random()-0.5) * 0.15;
+                    this.vy += (Math.random()-0.5) * 0.15;
+
+                    if (this.x < -60 || this.x > width+60 || this.y < -60 || this.y > height+60) {
+                        this.init();
+                    }
+                }
+
+                if (Math.hypot(rx - this.x, ry - this.y) < 90) {
+                    this.collect();
+                }
+            }
+            draw() {
+                ctx.save();
+                if(this.isTargeted && mouse.down) {
+                    ctx.beginPath();
+                    ctx.moveTo(mouse.x, mouse.y);
+                    ctx.lineTo(this.x, this.y);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 4;
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 12px Lexend';
+                    ctx.fillText('GRAB ME!', this.x, this.y - 35);
+                }
+
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size/2, 0, Math.PI*2);
+                ctx.fill();
+                
+                ctx.fillStyle = (this.type === 'co2') ? '#064e3b' : 'white';
+                ctx.font = '900 13px Grandstander';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const symbols = { sun: 'ENERGY', water: 'H₂O', co2: 'CO₂' };
+                ctx.fillText(symbols[this.type], this.x, this.y);
+                ctx.restore();
+            }
+            collect() {
+                if(!gameActive) return;
+                if(!currentRecipe[this.type]) {
+                    currentRecipe[this.type] = true;
+                    updateRecipeUI();
+                    checkRecipe();
+                }
+                this.init();
+            }
+        }
+
+        function updateRecipeUI() {
+            document.getElementById('slot-sun').className = 'ingredient' + (currentRecipe.sun ? ' active' : '');
+            document.getElementById('slot-water').className = 'ingredient' + (currentRecipe.water ? ' active' : '');
+            document.getElementById('slot-co2').className = 'ingredient' + (currentRecipe.co2 ? ' active' : '');
+            
+            if (!currentRecipe.sun) missionText.innerText = "MISSION: COLLECT ☀️ ENERGY!";
+            else if (!currentRecipe.water) missionText.innerText = "MISSION: COLLECT 💧 WATER (H₂O)!";
+            else if (!currentRecipe.co2) missionText.innerText = "MISSION: COLLECT ☁️ CARBON (CO₂)!";
+        }
+
+        function checkRecipe() {
+            if (currentRecipe.sun && currentRecipe.water && currentRecipe.co2) {
+                sugar += 5; oxygen += 15;
+                document.getElementById('sugar-count').innerText = sugar;
+                document.getElementById('o2-count').innerText = oxygen;
+                spawnFeedback("GLUCOSE!\nC₆H₁₂O₆", COLORS.leaf);
+                currentRecipe = { sun: false, water: false, co2: false };
+                setTimeout(updateRecipeUI, 100);
+                pulseEffect = 1;
+                corePing = 1;
+                
+                factBox.innerText = FACTS[Math.floor(Math.random() * FACTS.length)];
+            }
+        }
+
+        function spawnFeedback(text, color) {
+            const el = document.createElement('div');
+            el.className = 'feedback-pop';
+            el.innerText = text;
+            el.style.left = '50%';
+            el.style.top = '50%';
+            el.style.color = color;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function startGame() {
+            if(gameActive) return;
+            gameActive = true;
+            document.getElementById('start-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('start-overlay').style.display = 'none', 500);
+            
+            particles = Array.from({length: 18}, () => new Particle());
+            factBox.innerText = FACTS[0];
+
+            const timerInt = setInterval(() => {
+                if(!gameActive) { clearInterval(timerInt); return; }
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft;
+                if(timeLeft <= 0) endGame();
+            }, 1000);
+
+            loop();
+        }
+
+        function endGame() {
+            gameActive = false;
+            const end = document.getElementById('end-overlay');
+            end.style.display = 'flex';
+            setTimeout(() => end.style.opacity = '1', 50);
+            document.getElementById('end-score').innerText = `SYNTHESIZED ${sugar}g GLUCOSE AND RELEASED ${oxygen}% OXYGEN!`;
+        }
+
+        function loop() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, width, height);
+            const rx = width/2;
+            const ry = height/2;
+
+            particles.forEach(p => p.isTargeted = false);
+            const needed = ['sun', 'water', 'co2'].filter(t => !currentRecipe[t]);
+            let absoluteClosest = null;
+            let minGlobalDist = 5000; 
+            
+            particles.forEach(p => {
+                const onScreen = p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height;
+                if(onScreen && needed.includes(p.type) && !p.snapped) {
+                    const d = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+                    if(d < minGlobalDist) {
+                        minGlobalDist = d;
+                        absoluteClosest = p;
+                    }
+                }
+            });
+            if(absoluteClosest) absoluteClosest.isTargeted = true;
+            
+            if(corePing > 0) {
+                ctx.beginPath();
+                ctx.arc(rx, ry, 100 + (1 - corePing) * 200, 0, Math.PI*2);
+                ctx.strokeStyle = `rgba(16, 185, 129, ${corePing})`;
+                ctx.lineWidth = 5;
+                ctx.stroke();
+                corePing -= 0.02;
+            }
+
+            ctx.save();
+            ctx.translate(rx, ry);
+            ctx.rotate(Date.now() * 0.0008);
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+            ctx.lineWidth = 5;
+            ctx.setLineDash([25, 15]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 115, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.restore();
+
+            const coreSize = 85 + (Math.sin(Date.now()*0.006) * 6) + (pulseEffect * 45);
+            const coreGrad = ctx.createRadialGradient(rx, ry, 0, rx, ry, coreSize);
+            coreGrad.addColorStop(0, `rgba(16, 185, 129, ${0.45 + pulseEffect})`);
+            coreGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+            ctx.fillStyle = coreGrad;
+            ctx.beginPath();
+            ctx.arc(rx, ry, coreSize, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.fillStyle = "white";
+            ctx.font = 'bold 12px Lexend';
+            ctx.textAlign = 'center';
+            ctx.fillText('BRING HERE!', rx, ry - 40);
+            ctx.font = '70px Arial';
+            ctx.fillText('🍃', rx, ry + 25);
+
+            if (pulseEffect > 0) pulseEffect *= 0.93;
+
+            if(mouse.down) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mouse.x, mouse.y, SUCTION_RADIUS, 0, Math.PI*2);
+                ctx.stroke();
+            }
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            requestAnimationFrame(loop);
+        }
+    </script>
+</body>
+</html>
