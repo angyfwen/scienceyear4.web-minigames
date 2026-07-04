@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>photon_master_v5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #32a6ff; --gradient: linear-gradient(to bottom, #2eadff, #3d83ff, #7e61ff); }
+        body { 
+            background: #09090b; 
+            color: white; 
+            font-family: 'Space Grotesk', sans-serif; 
+            text-transform: lowercase; 
+            overflow: hidden !important; 
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .notification {
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            isolation: isolate; 
+            position: relative;
+            width: 100%; 
+            max-width: 800px; 
+            background: #29292c; 
+            border-radius: 1rem; 
+            overflow: hidden;
+            flex-shrink: 0;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 1024px) {
+            .notification {
+                max-width: 18rem;
+                height: auto; 
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        .notification:before { position: absolute; content: ""; inset: 0.0625rem; border-radius: 0.9375rem; background: #18181b; z-index: 2; }
+        .notification:after {
+            position: absolute; content: ""; width: 0.25rem; inset: 0.65rem auto 0.65rem 0.5rem;
+            border-radius: 0.125rem; background: var(--gradient); transition: transform 300ms ease; z-index: 4;
+        }
+        .notification:hover:after { transform: translateX(0.15rem); }
+        .hud-content { z-index: 5; padding: 1rem 1.5rem; position: relative; }
+
+        #arena { 
+            background: #111; 
+            border-radius: 2rem; 
+            position: relative; 
+            border: 1px solid #333; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 800px;
+            max-height: calc(100dvh - 16rem); 
+            aspect-ratio: 800 / 550;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 1;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 1024px) {
+            #arena {
+                max-height: 85dvh;
+                max-width: calc(100vw - 25rem);
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        .beam { stroke: var(--accent); stroke-width: 4; filter: drop-shadow(0 0 8px var(--accent)); stroke-dasharray: 10; animation: flow 1s linear infinite; }
+        @keyframes flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+        
+        .rainbow { animation: rainbow-glow 2s linear infinite; }
+        @keyframes rainbow-glow { 0% { stroke: #ff0000; } 33% { stroke: #00ff00; } 66% { stroke: #0000ff; } 100% { stroke: #ff0000; } }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-center gap-4 lg:gap-10 w-full max-w-full max-h-full">
+        
+        <div class="notification">
+            <div class="hud-content text-center lg:text-left">
+                <h2 class="text-blue-400 font-bold text-base lg:text-lg">[ photon_master ]</h2>
+                <p class="text-gray-500 text-[9px] lg:text-[10px] uppercase tracking-widest mb-1 lg:mb-2">unit 5 properties of light</p>
+                <div class="text-[10px] lg:text-xs space-y-0.5 lg:space-y-1 max-w-[200px] mx-auto lg:mx-0">
+                    <div class="flex justify-between"><span>level:</span> <span id="lvl-num">01/05</span></div>
+                    <div class="flex justify-between"><span>status:</span> <span id="status" class="text-pink-500">offline</span></div>
+                </div>
+                <div class="mt-2 lg:mt-4 text-[8px] lg:text-[9px] text-gray-600 leading-tight">
+                    drag mirrors to reflect [p94]<br>press 'r' to rotate ray diagram [p98]
+                </div>
+            </div>
+        </div>
+
+        <div id="arena">
+            <svg id="svg" width="100%" height="100%" viewBox="0 0 800 550" preserveAspectRatio="xMidYMid meet">
+                <!-- emitter -->
+                <g transform="translate(40, 275)"><rect x="-20" y="-10" width="40" height="20" rx="4" fill="#222" stroke="#444"/><circle r="4" fill="var(--accent)"/></g>
+                <!-- target -->
+                <g id="target-ui" transform="translate(740, 275)"><circle r="35" fill="none" stroke="#ff32a6" stroke-dasharray="5 3"/><circle r="8" fill="#ff32a6"/></g>
+                <!-- light ray -->
+                <path id="ray" class="beam" fill="none"/>
+                <!-- interactables -->
+                <g id="items"></g>
+            </svg>
+
+            <div id="win" class="absolute inset-0 bg-black/90 hidden flex flex-col items-center justify-center text-center rounded-[2rem] p-4">
+                <h1 class="text-3xl md:text-5xl font-black italic tracking-tighter text-blue-400">level_cleared</h1>
+                <p class="text-[10px] md:text-xs uppercase tracking-[0.5em] mt-4">rainbow formation mastered [p102]</p>
+                <button id="nextBtn" onclick="nextLvl()" class="mt-8 px-8 py-2 border border-blue-500 rounded-full text-blue-500 hover:bg-blue-500 hover:text-white transition">next_stage</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        function beep(f) { 
+            try {
+                const o = audio.createOscillator(); const g = audio.createGain(); 
+                o.frequency.value = f; g.gain.value = 0.02; o.connect(g); g.connect(audio.destination); 
+                o.start(); o.stop(audio.currentTime + 0.1); 
+            } catch(e) {}
+        }
+
+        const svg = document.getElementById('svg');
+        const ray = document.getElementById('ray');
+        const itemsG = document.getElementById('items');
+        
+        let lvl = 0;
+        let dragging = null;
+        let win = false;
+
+        const levels = [
+            // lvl 1: shadow obstacle - move it out of the way
+            { t: {x: 740, y: 275}, objs: [{x: 400, y: 275, a: 0, type: 'shadow'}] }, 
+            // lvl 2: single reflection
+            { t: {x: 740, y: 100}, objs: [{x: 400, y: 400, a: -45, type: 'mirror'}] }, 
+            // lvl 3: double reflection
+            { t: {x: 100, y: 100}, objs: [{x: 400, y: 275, a: 45, type: 'mirror'}, {x: 400, y: 100, a: -45, type: 'mirror'}] },
+            // lvl 4: refraction
+            { t: {x: 740, y: 450}, objs: [{x: 400, y: 275, a: 0, type: 'prism'}] }, 
+            // lvl 5: combine all
+            { t: {x: 740, y: 500}, objs: [{x: 300, y: 200, a: 45, type: 'mirror'}, {x: 500, y: 400, a: 10, type: 'prism'}] }
+        ];
+
+        function init() {
+            win = false; 
+            document.getElementById('win').classList.add('hidden');
+            document.getElementById('lvl-num').innerText = `0${lvl+1}/05`;
+            document.getElementById('target-ui').setAttribute('transform', `translate(${levels[lvl].t.x}, ${levels[lvl].t.y})`);
+            render();
+        }
+
+        function render() {
+            itemsG.innerHTML = '';
+            levels[lvl].objs.forEach((o, i) => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("transform", `translate(${o.x}, ${o.y}) rotate(${o.a})`);
+                
+                if(o.type === 'mirror') {
+                    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    r.setAttribute("x", "-50"); r.setAttribute("y", "-3"); r.setAttribute("width", "100"); r.setAttribute("height", "6"); 
+                    r.setAttribute("fill", "#666"); r.setAttribute("stroke", "#32a6ff");
+                    g.appendChild(r);
+                } else if(o.type === 'shadow') {
+                    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    r.setAttribute("x", "-20"); r.setAttribute("y", "-50"); r.setAttribute("width", "40"); r.setAttribute("height", "100"); 
+                    r.setAttribute("fill", "#222"); r.setAttribute("stroke", "#444");
+                    g.appendChild(r);
+                } else {
+                    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    p.setAttribute("d", "M-30 20 L30 20 L0 -30 Z"); 
+                    p.setAttribute("fill", "rgba(50, 166, 255, 0.2)"); p.setAttribute("stroke", "#32a6ff");
+                    g.appendChild(p);
+                }
+
+                g.style.cursor = 'grab';
+                const startDrag = (e) => { 
+                    e.preventDefault(); e.stopPropagation(); 
+                    dragging = o; beep(400); 
+                    g.style.cursor = 'grabbing';
+                };
+                g.onmousedown = startDrag;
+                g.ontouchstart = startDrag;
+                itemsG.appendChild(g);
+            });
+            updateRay();
+        }
+
+        // line-line intersection for precise hit points
+        function intersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+            const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (denom === 0) return null;
+            const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+                return { x: x1 + ua * (x2 - x1), y: y1 + ua * (y2 - y1), t: ua };
+            }
+            return null;
+        }
+
+        function updateRay() {
+            let cx = 40, cy = 275, ang = 0;
+            let pts = [[cx, cy]];
+            let hitTarget = false;
+            const maxBounces = 10;
+
+            for(let i=0; i < maxBounces; i++) {
+                let rad = ang * Math.PI / 180;
+                let x2 = cx + Math.cos(rad) * 2000;
+                let y2 = cy + Math.sin(rad) * 2000;
+                
+                let closest = null;
+                let hitObj = null;
+
+                // Check target (circle approximation)
+                const tx = levels[lvl].t.x, ty = levels[lvl].t.y;
+                const dTarget = Math.hypot(tx - cx, ty - cy);
+                const angleToTarget = Math.atan2(ty - cy, tx - cx) * 180 / Math.PI;
+                const angleDiff = Math.abs(((angleToTarget - ang + 180) % 360) - 180);
+                
+                if (angleDiff < 3 && dTarget > 10) {
+                    closest = { x: tx, y: ty, t: dTarget / 2000 };
+                    hitTarget = true;
+                }
+
+                // Check Objects
+                levels[lvl].objs.forEach(o => {
+                    const orad = o.a * Math.PI / 180;
+                    let p1, p2;
+                    
+                    if (o.type === 'mirror') {
+                        p1 = { x: o.x - Math.cos(orad) * 50, y: o.y - Math.sin(orad) * 50 };
+                        p2 = { x: o.x + Math.cos(orad) * 50, y: o.y + Math.sin(orad) * 50 };
+                    } else if (o.type === 'shadow') {
+                        // shadow block is thicker, check just the vertical-ish facing side
+                        p1 = { x: o.x - Math.sin(orad) * 50, y: o.y + Math.cos(orad) * 50 };
+                        p2 = { x: o.x + Math.sin(orad) * 50, y: o.y - Math.cos(orad) * 50 };
+                    } else { // prism
+                        p1 = { x: o.x - 30, y: o.y + 20 };
+                        p2 = { x: o.x + 30, y: o.y + 20 };
+                    }
+
+                    const inter = intersect(cx, cy, x2, y2, p1.x, p1.y, p2.x, p2.y);
+                    if (inter && (!closest || inter.t < closest.t)) {
+                        closest = inter;
+                        hitObj = o;
+                        hitTarget = false;
+                    }
+                });
+
+                if (closest) {
+                    pts.push([closest.x, closest.y]);
+                    if (hitTarget) break;
+                    
+                    cx = closest.x; cy = closest.y;
+                    if (hitObj.type === 'mirror') {
+                        ang = (2 * hitObj.a - ang) % 360;
+                    } else if (hitObj.type === 'prism') {
+                        ang = (ang + 30) % 360; // refraction bend
+                    } else {
+                        break; // shadow stop
+                    }
+                } else {
+                    pts.push([x2, y2]);
+                    break;
+                }
+            }
+
+            ray.setAttribute('d', pts.map((p, i) => (i===0?'M':'L')+p[0]+' '+p[1]).join(' '));
+            const status = document.getElementById('status');
+            if(hitTarget && !win) {
+                win = true; beep(800); ray.classList.add('rainbow');
+                status.innerText = "synchronized"; status.classList.replace('text-pink-500', 'text-green-400');
+                setTimeout(() => document.getElementById('win').classList.remove('hidden'), 500);
+            } else if (!hitTarget) {
+                ray.classList.remove('rainbow');
+                status.innerText = "offline"; status.classList.replace('text-green-400', 'text-pink-500');
+            }
+        }
+
+        function handleMove(clientX, clientY) {
+            if(dragging) {
+                const C = svg.getScreenCTM().inverse();
+                const pt = svg.createSVGPoint();
+                pt.x = clientX; pt.y = clientY;
+                const loc = pt.matrixTransform(C);
+                dragging.x = Math.max(20, Math.min(780, loc.x));
+                dragging.y = Math.max(20, Math.min(530, loc.y));
+                updateRay(); render();
+            }
+        }
+
+        window.onmousemove = (e) => handleMove(e.clientX, e.clientY);
+        window.ontouchmove = (e) => {
+            if(dragging) {
+                e.preventDefault();
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        };
+
+        const stopDrag = () => { dragging = null; render(); };
+        window.onmouseup = stopDrag;
+        window.ontouchend = stopDrag;
+        
+        window.onkeydown = (e) => { 
+            if(dragging && (e.key === 'r' || e.key === 'R')) { 
+                dragging.a = (dragging.a + 5) % 360; 
+                updateRay(); render(); 
+            } 
+        };
+
+        function nextLvl() { 
+            lvl = (lvl + 1) % levels.length; 
+            init(); 
+        }
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habitat Hop! 🐾</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            user-select: none;
+            touch-action: none;
+        }
+
+        h1, .game-font {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .habitat-zone {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .habitat-zone.drag-over {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .animal-card {
+            cursor: grab;
+            transition: transform 0.2s, opacity 0.2s;
+            z-index: 50;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
+        }
+
+        .animal-card:active {
+            cursor: grabbing;
+            transform: scale(1.2) rotate(5deg);
+        }
+
+        .success-particle {
+            position: absolute;
+            pointer-events: none;
+            animation: burst 0.8s ease-out forwards;
+        }
+
+        @keyframes burst {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Wave Animation for Level 1 */
+        .waves {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            opacity: 0.6;
+            animation: waveFlow 10s linear infinite;
+        }
+
+        @keyframes waveFlow {
+            0% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
+            33% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+            66% { border-radius: 30% 70% 70% 30% / 50% 60% 30% 40%; }
+            100% { border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%; }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+
+        .level-up-card {
+            animation: slideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(100%) scale(0.5); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+    <!-- Game Background -->
+    <div id="game-container" class="relative w-full max-w-4xl h-[600px] bg-white rounded-3xl shadow-2xl overflow-hidden m-4 border-8 border-white">
+        
+        <!-- HUD -->
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-50">
+            <div class="bg-white/80 backdrop-blur-md px-6 py-2 rounded-full shadow-lg border-2 border-pink-200">
+                <span class="game-font text-pink-500 text-xl" id="level-display">level 1: beach day 🏖️</span>
+            </div>
+            <div class="bg-white/80 backdrop-blur-md px-6 py-2 rounded-full shadow-lg border-2 border-yellow-200">
+                <span class="game-font text-yellow-600 text-xl" id="score-display">stars: 0/4 ⭐</span>
+            </div>
+        </div>
+
+        <!-- Habitat Zones -->
+        <div id="habitats" class="grid grid-cols-2 h-full">
+            <!-- Habitats injected by JS -->
+        </div>
+
+        <!-- Draggable Animals Container -->
+        <div id="animal-tray" class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-6 px-10 py-6 bg-white/40 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl z-50">
+            <!-- Animals injected by JS -->
+        </div>
+
+        <!-- Level Transition Overlay -->
+        <div id="level-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] hidden">
+            <div class="level-up-card bg-white p-10 rounded-[3rem] text-center shadow-2xl max-w-md mx-4">
+                <h2 class="game-font text-5xl text-pink-500 mb-4">amazing! ✨</h2>
+                <p class="text-xl text-gray-600 mb-8">you saved all the animals! ready for the next adventure? ₍ᐢ. ̫ .ᐢ₎</p>
+                <button onclick="nextLevel()" class="game-font bg-pink-500 hover:bg-pink-400 text-white text-2xl px-12 py-4 rounded-full transition-all active:scale-95 shadow-lg">
+                    let's go! 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- Finish Game Overlay -->
+        <div id="finish-overlay" class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center z-[101] hidden">
+            <div class="text-center text-white">
+                <h2 class="game-font text-7xl mb-6">grand champion! 👑</h2>
+                <p class="text-2xl mb-10">you are a habitat hero! every animal is home. ⸜(｡˃ ᵕ ˂ )⸝♡</p>
+                <button onclick="resetGame()" class="game-font bg-white text-indigo-600 text-2xl px-12 py-4 rounded-full transition-all active:scale-95 shadow-xl">
+                    play again 🎀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Buttons -->
+    <div class="mt-4 text-white/50 text-sm">drag the animals to their matching homes! 🐾</div>
+
+    <script>
+        const levels = [
+            {
+                name: "beach day 🏖️",
+                zones: [
+                    { id: "sea", name: "the deep sea", color: "bg-blue-400", subColor: "bg-blue-600", decoration: "waves" },
+                    { id: "sand", name: "sunny sand", color: "bg-orange-100", subColor: "bg-orange-200", decoration: "dots" }
+                ],
+                animals: [
+                    { id: "fish", emoji: "🐠", habitat: "sea" },
+                    { id: "whale", emoji: "🐋", habitat: "sea" },
+                    { id: "crab", emoji: "🦀", habitat: "sand" },
+                    { id: "turtle", emoji: "🐢", habitat: "sand" }
+                ]
+            },
+            {
+                name: "forest fun 🌲",
+                zones: [
+                    { id: "tree", name: "treetops", color: "bg-green-300", subColor: "bg-green-500", decoration: "leaves" },
+                    { id: "cave", name: "shadowy cave", color: "bg-stone-400", subColor: "bg-stone-600", decoration: "rocks" }
+                ],
+                animals: [
+                    { id: "bird", emoji: "🐦", habitat: "tree" },
+                    { id: "monkey", emoji: "🐒", habitat: "tree" },
+                    { id: "bat", emoji: "🦇", habitat: "cave" },
+                    { id: "bear", emoji: "🐻", habitat: "cave" }
+                ]
+            },
+            {
+                name: "arctic chill ❄️",
+                zones: [
+                    { id: "ice", name: "icy plains", color: "bg-slate-100", subColor: "bg-blue-50", decoration: "snow" },
+                    { id: "deep-water", name: "freezing water", color: "bg-cyan-800", subColor: "bg-cyan-900", decoration: "bubbles" }
+                ],
+                animals: [
+                    { id: "penguin", emoji: "🐧", habitat: "ice" },
+                    { id: "polar-bear", emoji: "🐻‍❄️", habitat: "ice" },
+                    { id: "seal", emoji: "🦭", habitat: "deep-water" },
+                    { id: "narwhal", emoji: "🦄", habitat: "deep-water" }
+                ]
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let score = 0;
+        let audioCtx = null;
+
+        const container = document.getElementById('game-container');
+        const habitatsEl = document.getElementById('habitats');
+        const trayEl = document.getElementById('animal-tray');
+        const levelDisplay = document.getElementById('level-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const levelOverlay = document.getElementById('level-overlay');
+        const finishOverlay = document.getElementById('finish-overlay');
+
+        // Sounds using Web Audio API
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSound(type) {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'pop') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'success') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.2); // C6
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'fail') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div');
+                p.className = 'success-particle text-2xl';
+                p.innerHTML = ['✨', '⭐', '🌸', '❄️'][Math.floor(Math.random() * 4)];
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                const tx = (Math.random() - 0.5) * 300;
+                const ty = (Math.random() - 0.5) * 300;
+                p.style.setProperty('--tx', `${tx}px`);
+                p.style.setProperty('--ty', `${ty}px`);
+                container.appendChild(p);
+                setTimeout(() => p.remove(), 1000);
+            }
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                c.style.opacity = Math.random();
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }
+        }
+
+        function initLevel() {
+            const level = levels[currentLevelIndex];
+            score = 0;
+            habitatsEl.innerHTML = '';
+            trayEl.innerHTML = '';
+            levelDisplay.innerText = `level ${currentLevelIndex + 1}: ${level.name}`;
+            scoreDisplay.innerText = `stars: 0/${level.animals.length} ⭐`;
+            levelOverlay.classList.add('hidden');
+
+            // Render Zones
+            level.zones.forEach(zone => {
+                const zoneDiv = document.createElement('div');
+                zoneDiv.className = `habitat-zone h-full flex flex-col items-center justify-start pt-20 ${zone.color} relative border-4 border-transparent`;
+                zoneDiv.dataset.id = zone.id;
+                
+                // Extra visual flair
+                if (zone.decoration === 'waves') {
+                    const wave = document.createElement('div');
+                    wave.className = 'waves';
+                    zoneDiv.appendChild(wave);
+                }
+
+                zoneDiv.innerHTML += `
+                    <div class="z-10 text-center">
+                        <h3 class="game-font text-3xl opacity-60 uppercase tracking-widest">${zone.name}</h3>
+                        <div class="animal-slots flex flex-wrap gap-4 justify-center mt-10 p-4 min-h-[150px] min-w-[200px]"></div>
+                    </div>
+                `;
+
+                // Drag events
+                zoneDiv.ondragover = (e) => {
+                    e.preventDefault();
+                    zoneDiv.classList.add('drag-over');
+                };
+                zoneDiv.ondragleave = () => zoneDiv.classList.remove('drag-over');
+                zoneDiv.ondrop = handleDrop;
+
+                habitatsEl.appendChild(zoneDiv);
+            });
+
+            // Render Animals (shuffled)
+            const shuffledAnimals = [...level.animals].sort(() => Math.random() - 0.5);
+            shuffledAnimals.forEach(animal => {
+                const card = document.createElement('div');
+                card.className = 'animal-card float-anim text-6xl p-2 select-none';
+                card.draggable = true;
+                card.innerHTML = animal.emoji;
+                card.dataset.id = animal.id;
+                card.dataset.habitat = animal.habitat;
+
+                card.ondragstart = (e) => {
+                    initAudio();
+                    e.dataTransfer.setData('text/plain', JSON.stringify(animal));
+                    card.style.opacity = '0.4';
+                };
+                card.ondragend = () => card.style.opacity = '1';
+
+                trayEl.appendChild(card);
+            });
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const zone = e.currentTarget;
+            zone.classList.remove('drag-over');
+            
+            const animalData = JSON.parse(e.dataTransfer.getData('text/plain'));
+            const animalEl = document.querySelector(`[data-id="${animalData.id}"]`);
+
+            if (zone.dataset.id === animalData.habitat) {
+                // SUCCESS!
+                playSound('success');
+                createParticles(e.clientX - container.getBoundingClientRect().left, e.clientY - container.getBoundingClientRect().top);
+                
+                // Move element
+                const slotContainer = zone.querySelector('.animal-slots');
+                const newAnimal = document.createElement('div');
+                newAnimal.className = 'text-7xl animate-bounce';
+                newAnimal.innerHTML = animalData.emoji;
+                slotContainer.appendChild(newAnimal);
+                
+                animalEl.remove();
+                score++;
+                
+                const level = levels[currentLevelIndex];
+                scoreDisplay.innerText = `stars: ${score}/${level.animals.length} ⭐`;
+
+                if (score === level.animals.length) {
+                    setTimeout(() => {
+                        if (currentLevelIndex < levels.length - 1) {
+                            levelOverlay.classList.remove('hidden');
+                            createConfetti();
+                        } else {
+                            finishOverlay.classList.remove('hidden');
+                            createConfetti();
+                        }
+                    }, 800);
+                }
+            } else {
+                // FAIL!
+                playSound('fail');
+                zone.classList.add('shake');
+                setTimeout(() => zone.classList.remove('shake'), 400);
+            }
+        }
+
+        function nextLevel() {
+            currentLevelIndex++;
+            initLevel();
+        }
+
+        function resetGame() {
+            currentLevelIndex = 0;
+            finishOverlay.classList.add('hidden');
+            initLevel();
+        }
+
+        // Initialize first level
+        window.onload = () => {
+            initLevel();
+        };
+
+        // Add shake animation styles dynamically
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .shake { animation: shake 0.4s ease-in-out; }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-10px); }
+                75% { transform: translateX(10px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
